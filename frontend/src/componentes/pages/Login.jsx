@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -13,7 +13,7 @@ function Login() {
     setError("");
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/login/", {
+      const response = await api.post("/api/login/", {
         email,
         password,
       });
@@ -88,3 +88,4 @@ function Login() {
 }
 
 export default Login;
+
