@@ -27,12 +27,8 @@ function Login() {
         localStorage.setItem("role", data.role);
         localStorage.setItem("username", data.username);
 
-        // Redirección según el rol
-        if (data.role === "admin") {
-          navigate("/dashboard");
-        } else {
-          navigate("/home");
-        }
+        // Redirección: ambas rutas válidas existentes
+        navigate("/dashboard");
       }
     } catch (err) {
       console.error("Error al iniciar sesión:", err.response?.data || err.message);
@@ -88,4 +84,3 @@ function Login() {
 }
 
 export default Login;
-
