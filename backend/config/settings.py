@@ -31,8 +31,30 @@ SECRET_KEY = 'django-insecure-5u6g9fwu4uzskyrsm2s*l24qq&rtzy-^kj599+6@ls3je8bzw&
 # SECURITY WARNING: don't run with debug turned on in production!
 # ...
 DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+
+# Lee lo que venga por env y limpia espacios
+_env_hosts = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+
+# Render autodetection
+render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if render_host and render_host not in _env_hosts:
+    _env_hosts.append(render_host)
+
+# Como fallback en dev
+if not _env_hosts:
+    _env_hosts = ["localhost", "127.0.0.1"]
+
+ALLOWED_HOSTS = _env_hosts
+
+# CSRF (auto con el host de Render si no está en env)
+_env_csrf = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+if render_host:
+    origin = f"https://{render_host}"
+    if origin not in _env_csrf:
+        _env_csrf.append(origin)
+CSRF_TRUSTED_ORIGINS = _env_csrf
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Detrás de proxy (Render/Cloudflare) para que Django sepa que la petición es HTTPS
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
