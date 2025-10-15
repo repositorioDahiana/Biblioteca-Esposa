@@ -31,8 +31,7 @@ SECRET_KEY = 'django-insecure-5u6g9fwu4uzskyrsm2s*l24qq&rtzy-^kj599+6@ls3je8bzw&
 # SECURITY WARNING: don't run with debug turned on in production!
 # ...
 DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
-
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
 # Detrás de proxy (Render/Cloudflare) para que Django sepa que la petición es HTTPS
@@ -180,7 +179,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-CCORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # En prod, quita ALLOW_ALL y usa variables para orígenes permitidos:
 CORS_ALLOWED_ORIGINS = [
