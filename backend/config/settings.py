@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 load_dotenv()
+from urllib.parse import urlparse, parse_qs
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,12 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-5u6g9fwu4uzskyrsm2s*l24qq&rtzy-^kj599+6@ls3je8bzw&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# ...
 DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
-# Application definition
+# Detrás de proxy (Render/Cloudflare) para que Django sepa que la petición es HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -87,25 +90,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 def build_postgres_from_env():
     url = os.getenv("DATABASE_URL", "").strip()
     if url:
-        # Expected format: postgres://user:pass@host:port/dbname
         parsed = urlparse(url)
+        # Mantener query params existentes y asegurar sslmode=require
+        q = parse_qs(parsed.query)
+        sslmode = q.get("sslmode", ["require"])[0]  # default require
         return {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': parsed.path.lstrip('/') or os.getenv('POSTGRES_DB', ''),
-            'USER': parsed.username or os.getenv('POSTGRES_USER', ''),
-            'PASSWORD': parsed.password or os.getenv('POSTGRES_PASSWORD', ''),
-            'HOST': parsed.hostname or os.getenv('POSTGRES_HOST', 'localhost'),
-            'PORT': str(parsed.port or os.getenv('POSTGRES_PORT', '5432')),
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed.path.lstrip("/") or os.getenv("POSTGRES_DB", ""),
+            "USER": parsed.username or os.getenv("POSTGRES_USER", ""),
+            "PASSWORD": parsed.password or os.getenv("POSTGRES_PASSWORD", ""),
+            "HOST": parsed.hostname or os.getenv("POSTGRES_HOST", "localhost"),
+            "PORT": str(parsed.port or os.getenv("POSTGRES_PORT", "5432")),
+            "OPTIONS": {"sslmode": sslmode},
         }
-    # Fallback to individual env vars
-    if os.getenv('POSTGRES_DB'):
+    # Fallback por vars sueltas
+    if os.getenv("POSTGRES_DB"):
         return {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB'),
-            'USER': os.getenv('POSTGRES_USER', ''),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB"),
+            "USER": os.getenv("POSTGRES_USER", ""),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+            "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")},
         }
     return None
 
@@ -173,14 +180,17 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True  
-CORS_ALLOW_CREDENTIALS = True
+CCORS_ALLOW_CREDENTIALS = True
+
+# En prod, quita ALLOW_ALL y usa variables para orígenes permitidos:
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React default port
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",  # Vite default port
-    "http://127.0.0.1:5173",
+    *(o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip())
+] or [
+    # defaults útiles en dev
+    "http://localhost:3000", "http://127.0.0.1:3000",
+    "http://localhost:5173", "http://127.0.0.1:5173",
 ]
+
 CORS_ALLOWED_METHODS = [
     'DELETE',
     'GET',
